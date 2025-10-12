@@ -1,4 +1,4 @@
-package com.example.ha
+package com.tarosuke777.ha
 
 import org.junit.Test
 
