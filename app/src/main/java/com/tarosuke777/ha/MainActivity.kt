@@ -1,5 +1,6 @@
 package com.tarosuke777.ha
 
+import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import android.webkit.WebChromeClient
@@ -20,6 +21,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.viewinterop.AndroidView
 import com.tarosuke777.ha.ui.theme.HaTheme
+import androidx.core.net.toUri
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -31,8 +33,8 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-//                    WebViewScreen("http://192.168.10.11")
-                    WebViewScreen("https://www.google.com")
+                    WebViewScreen("http://192.168.10.11")
+//                    WebViewScreen("https://www.google.com")
                 }
             }
         }
@@ -54,7 +56,7 @@ fun WebViewScreen(url:String){
 
     val webView = webViewState.value
 
-    val canGoBack = webView?.canGoBack() ?: false
+    val canGoBack = webView?.canGoBack() == true
     Log.d(TAG, "canGoBackの現在の値: $canGoBack (StateCheck: ${canGoBackState.value})")
 
     BackHandler(enabled = canGoBack) {
@@ -70,12 +72,33 @@ fun WebViewScreen(url:String){
         factory = { context ->
             Log.d(TAG, "AndroidView factory: WebViewを新規作成します")
             WebView(context).apply {
+                @Suppress("SetJavaScriptEnabled") // XSS脆弱性の警告を抑制。Web機能に必須のため。
                 settings.javaScriptEnabled = true
                 webChromeClient = WebChromeClient()
                 webViewClient = object : WebViewClient() {
                     override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
                         val newUrl = request.url.toString()
                         Log.i(TAG, "URL遷移を捕捉: $newUrl")
+
+                        if (newUrl.lowercase().endsWith(".mp4")) {
+                            Log.w(TAG, "MP4リンクを検出。外部プレイヤーに委譲します。")
+
+                            // 外部プレイヤー起動のためのIntentを作成
+                            val intent = Intent(Intent.ACTION_VIEW)
+                            intent.setDataAndType(newUrl.toUri(), "video/*")
+
+                            try {
+                                view.context.startActivity(intent)
+                            } catch (e: Exception) {
+                                Log.e(TAG, "外部プレイヤーの起動に失敗しました: ${e.message}")
+                                // 外部プレイヤーがない場合はWebViewでロードを試みる
+                                view.loadUrl(newUrl)
+                            }
+
+                            // WebViewでのロードはキャンセルし、外部で処理する
+                            return true
+                        }
+
                         view.loadUrl(newUrl)
                         canGoBackState.value = !canGoBackState.value
                         return true
