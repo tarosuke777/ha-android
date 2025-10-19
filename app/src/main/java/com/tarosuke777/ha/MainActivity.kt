@@ -33,6 +33,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.net.toUri
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import com.tarosuke777.ha.ui.theme.HaTheme
 
 class MainActivity : ComponentActivity() {
@@ -117,6 +118,8 @@ fun WebViewScreen(url: String, modifier: Modifier = Modifier) {
         mutableStateOf<WebView?>(null)
     }
 
+//    val isRefreshingState = remember { mutableStateOf(false) }
+
     val canGoBackState = remember { mutableStateOf(false) }
 
     val webView = webViewState.value
@@ -135,71 +138,99 @@ fun WebViewScreen(url: String, modifier: Modifier = Modifier) {
     AndroidView(
         modifier = modifier,
         factory = { context ->
-            Log.d(TAG, "AndroidView factory: WebViewを新規作成します")
-            WebView(context).apply {
+            Log.d(TAG, "AndroidView factory: SwipeRefreshLayoutとWebViewを新規作成します")
 
-                @Suppress("SetJavaScriptEnabled") // XSS脆弱性の警告を抑制。Web機能に必須のため。
-                settings.javaScriptEnabled = true
+            SwipeRefreshLayout(context).apply {
 
-                webChromeClient = WebChromeClient()
-                webViewClient = object : WebViewClient() {
-                    override fun shouldOverrideUrlLoading(
-                        view: WebView,
-                        request: WebResourceRequest
-                    ): Boolean {
-                        val newUrl = request.url.toString()
-                        Log.i(TAG, "URL遷移を捕捉: $newUrl")
+                setOnRefreshListener {
+                    Log.i(
+                        TAG, "プル・トゥ・リフレッシュがトリガーされました: WebViewをリロードします"
+                    )
+                    isRefreshing = true
+                    webViewState.value?.reload()  // WebViewをリロード
+                }
 
-                        if (newUrl.lowercase().endsWith(".mp4")) {
-                            Log.w(TAG, "MP4リンクを検出。外部プレイヤーに委譲します。")
-                            // 外部プレイヤー起動のためのIntentを作成 (ACTION_VIEWでURLを開く)
-                            val intent = Intent(Intent.ACTION_VIEW, newUrl.toUri()).apply {
-                                // 💡 Chromeのパッケージ名を明示的に指定
-                                setPackage(CHROME_PACKAGE)
-                            }
+                val newWebView = WebView(context).apply {
+                    @Suppress("SetJavaScriptEnabled") // XSS脆弱性の警告を抑制。Web機能に必須のため。
+                    settings.javaScriptEnabled = true
 
-                            try {
-                                view.context.startActivity(intent)
-                            } catch (e: Exception) {
-                                Log.e(
-                                    TAG,
-                                    "Google Chromeの起動に失敗しました (未インストールまたは無効): ${e.message}"
-                                )
-                                // Chromeがない場合、一般的なブラウザ/メディアプレイヤーでロードを試みる
-                                val fallbackIntent = Intent(Intent.ACTION_VIEW, newUrl.toUri())
+                    webChromeClient = WebChromeClient()
+                    webViewClient = object : WebViewClient() {
+                        override fun shouldOverrideUrlLoading(
+                            view: WebView,
+                            request: WebResourceRequest
+                        ): Boolean {
+                            val newUrl = request.url.toString()
+                            Log.i(TAG, "URL遷移を捕捉: $newUrl")
+
+                            if (newUrl.lowercase().endsWith(".mp4")) {
+                                Log.w(TAG, "MP4リンクを検出。外部プレイヤーに委譲します。")
+                                // 外部プレイヤー起動のためのIntentを作成 (ACTION_VIEWでURLを開く)
+                                val intent = Intent(Intent.ACTION_VIEW, newUrl.toUri()).apply {
+                                    // 💡 Chromeのパッケージ名を明示的に指定
+                                    setPackage(CHROME_PACKAGE)
+                                }
+
                                 try {
-                                    view.context.startActivity(fallbackIntent)
-                                } catch (e2: Exception) {
+                                    view.context.startActivity(intent)
+                                } catch (e: Exception) {
                                     Log.e(
                                         TAG,
-                                        "他の外部アプリの起動も失敗。WebViewでロードを試みます。エラー: ${e2.message}"
+                                        "Google Chromeの起動に失敗しました (未インストールまたは無効): ${e.message}"
                                     )
-                                    view.loadUrl(newUrl)
+                                    // Chromeがない場合、一般的なブラウザ/メディアプレイヤーでロードを試みる
+                                    val fallbackIntent =
+                                        Intent(Intent.ACTION_VIEW, newUrl.toUri())
+                                    try {
+                                        view.context.startActivity(fallbackIntent)
+                                    } catch (e2: Exception) {
+                                        Log.e(
+                                            TAG,
+                                            "他の外部アプリの起動も失敗。WebViewでロードを試みます。エラー: ${e2.message}"
+                                        )
+                                        view.loadUrl(newUrl)
+                                    }
                                 }
+                                // WebViewでのロードはキャンセルし、外部で処理する
+                                return true
                             }
-                            // WebViewでのロードはキャンセルし、外部で処理する
+                            isRefreshing = true
+                            view.loadUrl(newUrl)
+                            canGoBackState.value = !canGoBackState.value
                             return true
                         }
-                        view.loadUrl(newUrl)
-                        canGoBackState.value = !canGoBackState.value
-                        return true
-                    }
 
-                    override fun onPageFinished(view: WebView?, url: String?) {
-                        super.onPageFinished(view, url)
-                        Log.d(TAG, "onPageFinished: ページ読み込み完了。canGoBackStateを更新します。")
-                        canGoBackState.value = !canGoBackState.value
+                        override fun onPageFinished(view: WebView?, url: String?) {
+                            super.onPageFinished(view, url)
+                            Log.d(
+                                TAG,
+                                "onPageFinished: ページ読み込み完了。canGoBackStateを更新します。"
+                            )
+                            isRefreshing = false
+                            canGoBackState.value = !canGoBackState.value
+                        }
                     }
+                    loadUrl(url)
                 }
-                loadUrl(url)
-            }.also {
+
+                // WebViewをSwipeRefreshLayoutに追加
+                addView(newWebView)
+
+                // WebViewインスタンスを状態変数に格納
                 Log.d(TAG, ".alsoブロック: WebViewインスタンスを状態変数に格納します")
-                webViewState.value = it
+                webViewState.value = newWebView
             }
+
         },
-        update = { webView ->
-            Log.d(TAG, "AndroidView update: URLを $url に切り替えます")
-            webView.loadUrl(url)
+        update = { swipeRefreshLayout ->
+            // 3. URLが変更された場合はWebViewをロード
+            val currentWebView = webViewState.value
+            if (currentWebView != null && currentWebView.url != url) {
+                Log.d(TAG, "AndroidView update: URLを $url に切り替えます")
+                currentWebView.loadUrl(url)
+                // URL変更時にはリフレッシュインジケータを表示する
+                swipeRefreshLayout.isRefreshing = true
+            }
         }
     )
 }
