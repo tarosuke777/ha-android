@@ -59,7 +59,7 @@ private const val CHROME_PACKAGE = "com.android.chrome"
 
 @Composable
 fun MainContent() {
-    val initialUrl = "http://192.168.10.11"
+    val initialUrl = "http://192.168.10.11/videos/"
     val secondUrl = "http://192.168.10.10/hms/"
     val thirdUrl = "https://www.google.com"
 
@@ -153,6 +153,8 @@ fun WebViewScreen(url: String, modifier: Modifier = Modifier) {
                 val newWebView = WebView(context).apply {
                     @Suppress("SetJavaScriptEnabled") // XSS脆弱性の警告を抑制。Web機能に必須のため。
                     settings.javaScriptEnabled = true
+//                    settings.savePassword = true
+//                    settings.saveFormData = true
 
                     webChromeClient = WebChromeClient()
                     webViewClient = object : WebViewClient() {
