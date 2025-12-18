@@ -59,7 +59,7 @@ private const val CHROME_PACKAGE = "com.android.chrome"
 
 @Composable
 fun MainContent() {
-    val initialUrl = "http://192.168.10.11/videos/"
+    val initialUrl = "http://192.168.10.10/hv/videos/v2"
     val secondUrl = "http://192.168.10.10/hms/"
     val thirdUrl = "https://www.google.com"
 
