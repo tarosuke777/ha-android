@@ -87,7 +87,7 @@ fun MainContent() {
                     containerColor = Color.Black // 背景色を黒に設定
                 )
             ) {
-                Text("MP4")
+                Text("HV")
             }
             Button(
                 onClick = { currentUrlState.value = secondUrl },
