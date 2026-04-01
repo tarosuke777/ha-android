@@ -59,9 +59,9 @@ private const val CHROME_PACKAGE = "com.android.chrome"
 
 @Composable
 fun MainContent() {
-    val initialUrl = "http://192.168.10.10/hv/videos/v2"
+    val initialUrl = "http://192.168.10.10/hv/videos"
     val secondUrl = "http://192.168.10.10/hms/"
-    val thirdUrl = "https://www.google.com"
+    val thirdUrl = "http://192.168.10.10/hv/books"
 
     var currentUrlState = remember { mutableStateOf(initialUrl) }
 
@@ -87,7 +87,7 @@ fun MainContent() {
                     containerColor = Color.Black // 背景色を黒に設定
                 )
             ) {
-                Text("HV")
+                Text("HV-VIDEO")
             }
             Button(
                 onClick = { currentUrlState.value = secondUrl },
@@ -103,7 +103,15 @@ fun MainContent() {
                     containerColor = Color.Black // 背景色を黒に設定
                 )
             ) {
-                Text("Google")
+                Text("HV-BOOK")
+            }
+            Button(
+                onClick = { currentUrlState.value = thirdUrl },
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color.Black // 背景色を黒に設定
+                )
+            ) {
+                Text("CAMERA")
             }
         }
     }
@@ -162,13 +170,19 @@ fun WebViewScreen(url: String, modifier: Modifier = Modifier) {
                             view: WebView,
                             request: WebResourceRequest
                         ): Boolean {
-                            val newUrl = request.url.toString()
-                            Log.i(TAG, "URL遷移を捕捉: $newUrl")
+                            val url = request.url // Uriオブジェクト
+                            val urlString = url.toString()
+//                            val newUrl = request.url.toString()
+                            Log.i(TAG, "URL遷移を捕捉: $urlString")
 
-                            if (newUrl.lowercase().endsWith(".mp4")) {
-                                Log.w(TAG, "MP4リンクを検出。外部プレイヤーに委譲します。")
+                            val host = url.host ?: ""
+                            if (url.getQueryParameter("external") == "true"
+                                || urlString.lowercase().endsWith(".mp4")
+                                || !host.startsWith("192.168.")
+                            ) {
+                                Log.i(TAG, "外部ブラウザ（Chrome）で開きます: $urlString")
                                 // 外部プレイヤー起動のためのIntentを作成 (ACTION_VIEWでURLを開く)
-                                val intent = Intent(Intent.ACTION_VIEW, newUrl.toUri()).apply {
+                                val intent = Intent(Intent.ACTION_VIEW, urlString.toUri()).apply {
                                     // 💡 Chromeのパッケージ名を明示的に指定
                                     setPackage(CHROME_PACKAGE)
                                 }
@@ -182,7 +196,7 @@ fun WebViewScreen(url: String, modifier: Modifier = Modifier) {
                                     )
                                     // Chromeがない場合、一般的なブラウザ/メディアプレイヤーでロードを試みる
                                     val fallbackIntent =
-                                        Intent(Intent.ACTION_VIEW, newUrl.toUri())
+                                        Intent(Intent.ACTION_VIEW, urlString.toUri())
                                     try {
                                         view.context.startActivity(fallbackIntent)
                                     } catch (e2: Exception) {
@@ -190,14 +204,14 @@ fun WebViewScreen(url: String, modifier: Modifier = Modifier) {
                                             TAG,
                                             "他の外部アプリの起動も失敗。WebViewでロードを試みます。エラー: ${e2.message}"
                                         )
-                                        view.loadUrl(newUrl)
+                                        view.loadUrl(urlString)
                                     }
                                 }
                                 // WebViewでのロードはキャンセルし、外部で処理する
                                 return true
                             }
                             isRefreshing = true
-                            view.loadUrl(newUrl)
+                            view.loadUrl(urlString)
                             canGoBackState.value = !canGoBackState.value
                             return true
                         }
