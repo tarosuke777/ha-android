@@ -11,6 +11,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -19,6 +20,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
@@ -62,6 +64,7 @@ fun MainContent() {
     val initialUrl = "http://192.168.10.10/hv/videos"
     val secondUrl = "http://192.168.10.10/hms/"
     val thirdUrl = "http://192.168.10.10/hv/books"
+    val hvImageUrl = "http://192.168.10.10/hv/images"
 
     var currentUrlState = remember { mutableStateOf(initialUrl) }
 
@@ -74,11 +77,14 @@ fun MainContent() {
             url = currentUrlState.value,
             modifier = Modifier.weight(1f) // 修正: 引数名を明示 (modifier = )
         )
+
+        val scrollState = rememberScrollState()
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 8.dp, vertical = 8.dp)
-                .navigationBarsPadding(),
+                .navigationBarsPadding()
+                .horizontalScroll(scrollState),
             horizontalArrangement = Arrangement.SpaceEvenly
         ) {
             Button(
@@ -104,6 +110,14 @@ fun MainContent() {
                 )
             ) {
                 Text("HV-BOOK")
+            }
+            Button(
+                onClick = { currentUrlState.value = hvImageUrl },
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color.Black // 背景色を黒に設定
+                )
+            ) {
+                Text("HV-IMAGE")
             }
             Button(
                 onClick = { currentUrlState.value = thirdUrl },
