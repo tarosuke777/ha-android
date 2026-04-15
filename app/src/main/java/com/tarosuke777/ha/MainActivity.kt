@@ -61,12 +61,11 @@ private const val CHROME_PACKAGE = "com.android.chrome"
 
 @Composable
 fun MainContent() {
-    val initialUrl = "http://192.168.10.10/hv/videos"
-    val secondUrl = "http://192.168.10.10/hms/"
-    val thirdUrl = "http://192.168.10.10/hv/books"
-    val hvImageUrl = "http://192.168.10.10/hv/images"
+    val hvUrl = "http://192.168.10.10/hv/"
+    val hmsUrl = "http://192.168.10.10/hms/"
+    val hbUrl = "http://192.168.10.10/hb/"
 
-    var currentUrlState = remember { mutableStateOf(initialUrl) }
+    var currentUrlState = remember { mutableStateOf(hvUrl) }
 
     Column(
         modifier = Modifier
@@ -88,15 +87,15 @@ fun MainContent() {
             horizontalArrangement = Arrangement.SpaceEvenly
         ) {
             Button(
-                onClick = { currentUrlState.value = initialUrl },
+                onClick = { currentUrlState.value = hvUrl },
                 colors = ButtonDefaults.buttonColors(
                     containerColor = Color.Black // 背景色を黒に設定
                 )
             ) {
-                Text("HV-VIDEO")
+                Text("HV")
             }
             Button(
-                onClick = { currentUrlState.value = secondUrl },
+                onClick = { currentUrlState.value = hmsUrl },
                 colors = ButtonDefaults.buttonColors(
                     containerColor = Color.Black // 背景色を黒に設定
                 )
@@ -104,28 +103,12 @@ fun MainContent() {
                 Text("HMS")
             }
             Button(
-                onClick = { currentUrlState.value = thirdUrl },
+                onClick = { currentUrlState.value = hbUrl },
                 colors = ButtonDefaults.buttonColors(
                     containerColor = Color.Black // 背景色を黒に設定
                 )
             ) {
-                Text("HV-BOOK")
-            }
-            Button(
-                onClick = { currentUrlState.value = hvImageUrl },
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color.Black // 背景色を黒に設定
-                )
-            ) {
-                Text("HV-IMAGE")
-            }
-            Button(
-                onClick = { currentUrlState.value = thirdUrl },
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color.Black // 背景色を黒に設定
-                )
-            ) {
-                Text("CAMERA")
+                Text("HB")
             }
         }
     }
